@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base - 3D Idle Game</title>
+    <style>
+        /* 1. Reset and background setup */
+        body { 
+            margin: 0; 
+            background-color: #1a1a1a; /* Dark void background */
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            overflow: hidden; 
+        }
+
+        /* 2. The Gray Box (Game Viewport) */
+        #game-container { 
+            width: 800px; 
+            height: 600px; 
+            background-color: #808080; /* Gray game background */
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            border: 2px solid #333;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container"></div>
+
+    <!-- Load the Three.js Engine from CDN -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+
+        // --- 1. SCENE SETUP ---
+        const container = document.getElementById('game-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x808080); // Match CSS gray
+        
+        const camera = new THREE.PerspectiveCamera(45, 800 / 600, 1, 2000);
+        camera.position.set(0, 150, 400); // Adjusting view for a human-sized model
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(800, 600);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        // --- 2. LIGHTING ---
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 3);
+        hemiLight.position.set(0, 200, 0);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 2);
+        dirLight.position.set(0, 200, 100);
+        scene.add(dirLight);
+
+        // --- 3. LOADING THE MODEL ---
+        let mixer; 
+        const clock = new THREE.Clock();
+        const loader = new FBXLoader();
+        
+        // This matches your filename: "Fighting Idle.fbx"
+        loader.load('Fighting Idle.fbx', (object) => {
+            
+            // Adjust scale if your model is way too big or small
+            object.scale.set(1, 1, 1); 
+            
+            scene.add(object);
+            
+            // Setup Mixamo Animation
+            if (object.animations && object.animations.length > 0) {
+                mixer = new THREE.AnimationMixer(object);
+                const action = mixer.clipAction(object.animations[0]);
+                action.play();
+            } else {
+                console.warn("No animations found in this FBX file.");
+            }
+
+        }, (xhr) => {
+            console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+        }, (error) => {
+            console.error("Error loading FBX:", error);
+        });
+
+        // --- 4. GAME LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const delta = clock.getDelta();
+            if (mixer) mixer.update(delta);
+            
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
